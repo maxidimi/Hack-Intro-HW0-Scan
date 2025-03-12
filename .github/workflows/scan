@@ -1,0 +1,72 @@
+name: SBOM/SCA Scout
+
+on:
+  workflow_dispatch:
+    inputs:
+        docker_image:
+          description: 'The Docker image to scan'
+          required: true
+          default: 'bkimminich/juice-shop'
+
+jobs:
+  scout:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      packages: write
+      security-events: write
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Login to Dockerhub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Pull the image
+        run: docker pull ${{ github.event.inputs.docker_image }}
+
+      - name: Docker Scout
+        uses: docker/scout-action@v1
+        with:
+          command: cves,recommendations,compare,sbom
+          image: ${{ github.event.inputs.docker_image }}
+          exit-code: false  # Don't fail on CVE findings, just show the output
+          sarif-file: sca_scout.sarif
+          output: sbom_scout.spdx.json
+          format: spdx
+
+      - name: Generate successful run info
+        run: |
+          echo "Scan completed successfully for ${{ github.event.inputs.docker_image }}" > successful_run.txt
+          echo "SBOM and SARIF reports have been generated." >> successful_run.txt
+          echo "Here are the results of the scan:" >> successful_run.txt
+          cat sbom_scout.spdx.json >> successful_run.txt
+          cat sca_scout.sarif >> successful_run.txt
+
+      - name: Upload SBOM file as an artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: sbom_scout.spdx.json
+          path: sbom_scout.spdx.json
+
+      - name: Upload SARIF file as an artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: sca_scout.sarif
+          path: sca_scout.sarif
+
+      - name: Upload successful run results
+        uses: actions/upload-artifact@v4
+        with:
+          name: successful_run.txt
+          path: successful_run.txt
+
+      # Optional: SBOM submission
+      - name: SBOM upload
+        uses: advanced-security/spdx-dependency-submission-action@v0.1.1
+        with:
+          sbom-file: sbom_scout.spdx.json
