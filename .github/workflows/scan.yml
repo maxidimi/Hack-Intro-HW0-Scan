@@ -7,7 +7,7 @@ on:
         docker_image:
           description: 'The Docker image to scan'
           required: true
-          default: 'maxidimi/datetime'
+          default: 'maxidimi/datetime:vuln'
 
 # env:
 #   REGISTRY: ghcr.io
