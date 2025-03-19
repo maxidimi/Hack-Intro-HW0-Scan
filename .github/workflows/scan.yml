@@ -7,7 +7,7 @@ on:
         docker_image:
           description: 'The Docker image to scan'
           required: true
-          default: 'bkimminich/juice-shop'
+          default: 'maxidimi/datetime'
 
 # env:
 #   REGISTRY: ghcr.io
